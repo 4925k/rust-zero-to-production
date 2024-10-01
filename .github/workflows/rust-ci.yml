@@ -1,0 +1,56 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Install Rust
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      # Cache cargo dependencies
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Run tests
+      - name: Run cargo test
+        run: cargo test
+
+      # Run Tarpaulin for code coverage (ignoring tests)
+      - name: Run cargo tarpaulin
+        run: cargo tarpaulin --ignore-tests
+
+      # Run Clippy for linting with warnings treated as errors
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
+
+      # Check code formatting with rustfmt
+      - name: Check code formatting
+        run: cargo fmt -- --check
+
+      # Run cargo audit for dependency vulnerabilities
+      - name: Run cargo audit
+        run: cargo audit
